@@ -1,6 +1,6 @@
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/client";
 import type { User as FirebaseUser } from "firebase/auth";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 
 export async function ensureUserDocument(user: FirebaseUser) {
   const db = firestore();

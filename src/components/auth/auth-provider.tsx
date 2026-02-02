@@ -1,16 +1,16 @@
 "use client";
 
+import { Auth } from "@/lib/firebase/client";
+import { ensureUserDocument } from "@/lib/firebase/users";
+import { useAuthStore } from "@/store/auth.store";
 import { onAuthStateChanged } from "firebase/auth";
 import * as React from "react";
-import { firebaseAuth } from "@/lib/firebase/client";
-import { useAuthStore } from "@/store/auth.store";
-import { ensureUserDocument } from "@/lib/firebase/users";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setUser = useAuthStore((s) => s.setUser);
 
   React.useEffect(() => {
-    const auth = firebaseAuth();
+    const auth = Auth();
     return onAuthStateChanged(auth, (u) => {
       if (!u) {
         setUser(null);
