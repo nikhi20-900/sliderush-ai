@@ -4,12 +4,20 @@ import { firestore } from "@/lib/firebase/client";
 import { firebaseAuth } from "@/lib/firebase/client";
 
 // NOTE: This is a simple client-side authenticated API using Firebase client SDK.
-// In production you’d normally verify ID tokens server-side, but for now we rely
+// In production you'd normally verify ID tokens server-side, but for now we rely
 // on the currently logged-in user from the client.
 
 export async function GET() {
   const db = firestore();
+  if (!db) {
+    return new NextResponse("Database not available", { status: 503 });
+  }
+  
   const auth = firebaseAuth();
+  if (!auth) {
+    return new NextResponse("Auth not available", { status: 503 });
+  }
+  
   const currentUser = auth.currentUser;
   if (!currentUser) {
     return new NextResponse("Unauthorized", { status: 401 });
@@ -30,7 +38,15 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const db = firestore();
+  if (!db) {
+    return new NextResponse("Database not available", { status: 503 });
+  }
+  
   const auth = firebaseAuth();
+  if (!auth) {
+    return new NextResponse("Auth not available", { status: 503 });
+  }
+  
   const currentUser = auth.currentUser;
   if (!currentUser) {
     return new NextResponse("Unauthorized", { status: 401 });

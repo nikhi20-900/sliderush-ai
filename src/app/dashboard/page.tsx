@@ -1,13 +1,15 @@
-import { SiteHeader } from "@/components/layout/site-header";
-import { SiteFooter } from "@/components/layout/site-footer";
+"use client";
+
 import { AuthGate } from "@/components/auth/auth-gate";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ProjectList } from "@/components/dashboard/project-list";
-import { useEffect } from "react";
-import { useProjectsStore } from "@/store/projects.store";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { SiteHeader } from "@/components/layout/site-header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/store/auth.store";
+import { useProjectsStore } from "@/store/projects.store";
 import Link from "next/link";
+import { useEffect } from "react";
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);

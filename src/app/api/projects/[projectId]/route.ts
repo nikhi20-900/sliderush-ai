@@ -1,17 +1,18 @@
-import { NextResponse } from "next/server";
+import { firebaseAuth, firestore } from "@/lib/firebase/client";
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
-import { firestore } from "@/lib/firebase/client";
-import { firebaseAuth } from "@/lib/firebase/client";
+import { NextResponse } from "next/server";
 
 function requireUser() {
   const auth = firebaseAuth();
+  if (!auth) {
+    throw new Error("Firebase Auth not initialized");
+  }
   const user = auth.currentUser;
   if (!user) {
     throw new Error("UNAUTHENTICATED");
@@ -21,11 +22,15 @@ function requireUser() {
 
 export async function GET(
   _request: Request,
-  { params }: { params: { projectId: string } }
+  { params }: { params: Promise<{ projectId: string }> }
 ) {
+  const { projectId } = await params;
   const user = requireUser();
   const db = firestore();
-  const ref = doc(collection(db, "projects"), params.projectId);
+  if (!db) {
+    return new NextResponse("Database not available", { status: 503 });
+  }
+  const ref = doc(collection(db, "projects"), projectId);
   const snap = await getDoc(ref);
   if (!snap.exists() || snap.data().userId !== user.uid) {
     return new NextResponse("Not found", { status: 404 });
@@ -35,11 +40,15 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { projectId: string } }
+  { params }: { params: Promise<{ projectId: string }> }
 ) {
+  const { projectId } = await params;
   const user = requireUser();
   const db = firestore();
-  const ref = doc(collection(db, "projects"), params.projectId);
+  if (!db) {
+    return new NextResponse("Database not available", { status: 503 });
+  }
+  const ref = doc(collection(db, "projects"), projectId);
   const snap = await getDoc(ref);
   if (!snap.exists() || snap.data().userId !== user.uid) {
     return new NextResponse("Not found", { status: 404 });
@@ -57,11 +66,15 @@ export async function PATCH(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { projectId: string } }
+  { params }: { params: Promise<{ projectId: string }> }
 ) {
+  const { projectId } = await params;
   const user = requireUser();
   const db = firestore();
-  const ref = doc(collection(db, "projects"), params.projectId);
+  if (!db) {
+    return new NextResponse("Database not available", { status: 503 });
+  }
+  const ref = doc(collection(db, "projects"), projectId);
   const snap = await getDoc(ref);
   if (!snap.exists() || snap.data().userId !== user.uid) {
     return new NextResponse("Not found", { status: 404 });

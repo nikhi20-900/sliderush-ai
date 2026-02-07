@@ -1,0 +1,163 @@
+SlideRush AI - Code Review Report
+✅ COMPLETED ITEMS
+1. Project Structure & Configuration
+Folder structure: Matches context.md specification ✓
+Tech stack setup: Next.js, Tailwind, shadcn/ui, Zustand, Firebase ✓
+Environment validation: Zod schema in lib/env.ts ✓
+Firebase setup: Client SDK (client.ts) and Admin SDK (admin.ts) ✓
+2. Public Routes
+| Route | Status | Components |
+|-------|--------|------------|
+| / | ✅ Done | Hero, FeatureHighlights, CTAGetStarted, SiteHeader, SiteFooter |
+| /auth | ✅ Done | EmailAuthForm, GoogleSignInButton, PhoneOtpForm |
+| /pricing | ✅ Done | Free/Pro/Ultra plans UI |
+| /templates | ✅ Done | 5 template cards (College Seminar, Research Report, etc.) |
+
+3. Authentication System
+| Feature | Status |
+|---------|--------|
+| Firebase Auth setup | ✅ |
+| AuthProvider with onAuthStateChanged | ✅ |
+| Email/Password login/signup | ✅ |
+| Google Sign-In (with popup→redirect fallback) | ✅ |
+| Phone OTP with invisible reCAPTCHA | ✅ |
+| AuthGate route protection | ✅ |
+| User document creation/updates | ✅ |
+| ensureUserDocument() with plan: "free" default | ✅ |
+
+4. Protected Routes
+| Route | Status | Notes |
+|-------|--------|-------|
+| /dashboard | ✅ Done | ProjectList, ProjectCard, fetch API integration |
+| /create | ⚠️ Partial | Page exists with placeholder UI (wizard steps not implemented) |
+| /editor/[projectId] | ❌ Missing | Editor page doesn't exist |
+| /account | ❌ Missing | Profile/billing page not implemented |
+
+5. Database Schema Implementation
+| Collection | Status | Implementation |
+|------------|--------|----------------|
+| users | ✅ Done | lib/firebase/users.ts with plan, quota, razorpay fields |
+| projects | ✅ Done | Full schema with status, generationStage, generationProgress |
+| slides subcollection | ❌ Missing | No API routes or types fully implemented |
+| assets | ❌ Missing | Not implemented |
+| exports | ❌ Missing | Not implemented |
+| usage_events | ❌ Missing | Not implemented |
+
+6. API Routes
+| Endpoint | Status |
+|----------|--------|
+| GET /api/projects | ✅ |
+| POST /api/projects | ✅ |
+| GET /api/projects/:id | ✅ |
+| PATCH /api/projects/:id | ✅ (title, templateId only) |
+| DELETE /api/projects/:id | ✅ (soft delete) |
+| POST /api/projects/:id/generate | ❌ Missing |
+| POST /api/projects/:id/export | ❌ Missing |
+| POST /api/slides/:slideId/rewrite | ❌ Missing |
+| POST /api/slides/:slideId/image/regenerate | ❌ Missing |
+| /billing/* | ❌ Missing |
+
+7. State Management (Zustand)
+| Store | Status | Fields |
+|-------|--------|--------|
+| auth.store.ts | ✅ Done | user, setUser |
+| projects.store.ts | ✅ Done | projects, isLoading, setProjects, upsertProject |
+| editor.store.ts | ⚠️ Partial | project, slides, selectedSlideId (basic setup) |
+
+8. UI Components (shadcn/ui style)
+| Component | Status |
+|-----------|--------|
+| Button | ✅ (with Slot for asChild) |
+| Input | ✅ |
+| Label | ✅ |
+| Card | ✅ (Header, Title, Description, Content, Footer) |
+| Textarea | ✅ |
+| Separator | ✅ |
+| Dialog | ✅ (Radix-based) |
+| Toaster | ✅ (Sonner) |
+| Sonner | ✅ |
+
+9. Types Definition
+| Type File | Status |
+|-----------|--------|
+| project.ts | ✅ Complete (Plan, ProjectStatus, Audience, Tone, SlideLayout, ProjectTheme, Project) |
+| slide.ts | ✅ Complete (Slide type with all fields) |
+
+10. Features Highlighted in Landing
+Two-pass AI pipeline ✓
+Editor with dnd-kit, autosave (mentioned) ✓
+Panic Mode (Ultra) ✓
+Watermarks on free exports ✓
+❌ MISSING / NOT YET IMPLEMENTED
+Critical Missing Features
+Editor Page (/editor/[projectId])
+
+Slide canvas component
+Drag-and-drop with dnd-kit
+Inline text editing
+Image replacement/regeneration
+AI rewrite tools
+Theme switching
+Create Wizard Steps
+
+Topic input + AI suggestions
+Slide count (6-12)
+Template selection with preview
+Generation progress UI
+AI Integration
+
+OpenAI client setup
+Outline generation (Pass A)
+Slide content generation (Pass B)
+Image queries via Unsplash
+Zod schemas for AI contracts
+Slide Management
+
+slides subcollection CRUD
+Reorder API
+Rewrite API
+Image regeneration API
+Export
+
+PptxGenJS integration
+PDF export
+Watermark logic
+Billing/Payments
+
+Razorpay integration
+Checkout flow
+Webhook handling
+Quota enforcement
+Additional Pages
+
+/account (profile, billing, usage history)
+/templates preview download (mentioned as optional)
+📋 RECOMMENDED PRIORITY
+Phase 1: Editor & Creation
+Implement /editor/[projectId] page
+Complete Create wizard step components
+Add slide management API routes
+Phase 2: AI Generation
+OpenAI client + prompts setup
+Unsplash integration for images
+Generation pipeline API
+Phase 3: Export & Polish
+PptxGenJS export with watermark
+PDF export fallback
+Panic Mode implementation
+Phase 4: Billing
+Razorpay integration
+Usage tracking (usage_events)
+Plan gating enforcement
+📊 COMPLETION SUMMARY
+| Category | Completed | Total | % |
+|----------|-----------|-------|---|
+| Routes/Pages | 6 | 8 | 75% |
+| Auth Methods | 3 | 3 | 100% |
+| Database Collections | 2 | 6 | 33% |
+| API Endpoints | 5 | 12 | 42% |
+| State Stores | 3 | 3 | 100% |
+| UI Components | 8 | 8 | 100% |
+| Types | 2 | 2 | 100% |
+
+Overall Completion: ~60% - The foundation is solid with auth, database schema, and core pages in place. The editor and AI generation pipeline are the main gaps to address next.

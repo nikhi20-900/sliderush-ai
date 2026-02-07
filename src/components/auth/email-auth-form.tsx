@@ -1,11 +1,12 @@
 "use client";
 
-import * as React from "react";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-import { firebaseAuth } from "@/lib/firebase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { firebaseAuth } from "@/lib/firebase/client";
+import type { Auth as FirebaseAuth } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import * as React from "react";
 import { toast } from "sonner";
 
 export function EmailAuthForm() {
@@ -19,11 +20,15 @@ export function EmailAuthForm() {
     setIsLoading(true);
     try {
       const auth = firebaseAuth();
+      if (!auth) {
+        throw new Error("Authentication service not available");
+      }
+      
       if (mode === "login") {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(auth as FirebaseAuth, email, password);
         toast.success("Signed in");
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        await createUserWithEmailAndPassword(auth as FirebaseAuth, email, password);
         toast.success("Account created");
       }
     } catch (err: any) {
