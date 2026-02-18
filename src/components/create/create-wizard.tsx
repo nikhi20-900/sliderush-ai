@@ -3,6 +3,9 @@
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { UpgradePrompt } from "@/components/ui/upgrade/upgrade-prompt";
+import { Zap, Lock } from "lucide-react";
 import { GenerationProgress } from "./generation-progress";
 import { SlideCountSelector } from "./slidecount-selector";
 import { TemplateGrid } from "./template-grid";
@@ -121,6 +124,9 @@ export function CreateWizard() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [panicMode, setPanicMode] = useState(false);
+  const [showPanicUpgrade, setShowPanicUpgrade] = useState(false);
+  const userPlan: string = "free"; // TODO: Get from auth context
 
   const handleTopicSubmit = (selectedTopic: string) => {
     setTopic(selectedTopic);
@@ -167,7 +173,7 @@ export function CreateWizard() {
       const genRes = await fetch(`/api/projects/${newProjectId}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "normal" }),
+        body: JSON.stringify({ mode: panicMode ? "panic" : "normal" }),
       });
 
       if (!genRes.ok) {
@@ -251,12 +257,59 @@ export function CreateWizard() {
         );
       case "template":
         return (
-          <TemplateGrid
-            templates={TEMPLATES}
-            selectedId={selectedTemplate}
-            onSelect={setSelectedTemplate}
-            onSubmit={handleTemplateSubmit}
-          />
+          <div className="space-y-4">
+            <TemplateGrid
+              templates={TEMPLATES}
+              selectedId={selectedTemplate}
+              onSelect={setSelectedTemplate}
+              onSubmit={handleTemplateSubmit}
+              userPlan={userPlan}
+            />
+
+            {/* Panic Mode Toggle */}
+            <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500 text-white">
+                  <Zap className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-neutral-900 flex items-center gap-2">
+                    Panic Mode
+                    {userPlan !== "ultra" && (
+                      <span className="text-xs font-medium text-amber-600 bg-amber-200 px-1.5 py-0.5 rounded">
+                        Ultra
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-sm text-neutral-600">
+                    One-shot generation in ~15 seconds. No images, maximum speed.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant={panicMode ? "default" : "outline"}
+                size="sm"
+                className={panicMode ? "bg-amber-500 hover:bg-amber-600" : ""}
+                onClick={() => {
+                  if (userPlan !== "ultra") {
+                    setShowPanicUpgrade(true);
+                    return;
+                  }
+                  setPanicMode(!panicMode);
+                }}
+              >
+                {userPlan !== "ultra" && <Lock className="w-3 h-3 mr-1" />}
+                {panicMode ? "ON" : "OFF"}
+              </Button>
+            </div>
+
+            <UpgradePrompt
+              feature="panic_mode"
+              isOpen={showPanicUpgrade}
+              onClose={() => setShowPanicUpgrade(false)}
+              onUpgrade={() => { window.location.href = "/pricing"; }}
+            />
+          </div>
         );
       case "generating":
         return (
@@ -288,26 +341,23 @@ export function CreateWizard() {
           {steps.map((s, index) => (
             <div key={s.key} className="flex items-center">
               <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-                  index <= currentStepIndex
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-500"
-                }`}
+                className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${index <= currentStepIndex
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-500"
+                  }`}
               >
                 {index + 1}
               </div>
               <span
-                className={`ml-2 text-sm ${
-                  index <= currentStepIndex ? "text-gray-900" : "text-gray-500"
-                }`}
+                className={`ml-2 text-sm ${index <= currentStepIndex ? "text-gray-900" : "text-gray-500"
+                  }`}
               >
                 {s.label}
               </span>
               {index < steps.length - 1 && (
                 <div
-                  className={`w-12 h-0.5 mx-4 ${
-                    index < currentStepIndex ? "bg-blue-600" : "bg-gray-200"
-                  }`}
+                  className={`w-12 h-0.5 mx-4 ${index < currentStepIndex ? "bg-blue-600" : "bg-gray-200"
+                    }`}
                 />
               )}
             </div>

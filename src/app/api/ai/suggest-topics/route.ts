@@ -43,8 +43,8 @@ Each variation should be clear, specific, and engaging.`,
       suggestions = JSON.parse(content);
     } catch {
       // If parsing fails, try to extract array from response
-      const match = content.match(/\[.*\]/s);
-      if (match) {
+      const match = content.match(/\[.*\]/);
+      if (match && match[0]) {
         try {
           suggestions = JSON.parse(match[0]);
         } catch {

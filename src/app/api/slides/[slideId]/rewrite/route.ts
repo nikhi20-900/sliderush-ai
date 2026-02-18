@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { firebaseAuth, firestore } from "@/lib/firebase/client";
+import { canAccessFeature } from "@/lib/features/gating";
+import { checkRewriteQuota, incrementUsage } from "@/lib/usage/quota";
+import { rewriteSlide, SlideContent } from "@/lib/openai/client";
+import { collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 
 export async function POST(
   request: Request,
@@ -11,61 +11,98 @@ export async function POST(
 ) {
   try {
     const { slideId } = await params;
+    const auth = firebaseAuth();
+    const user = auth?.currentUser;
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { intent = "shorter", customPrompt } = body;
+    const { intent = "shorter", customPrompt, projectId } = body;
 
-    // In a real implementation, you would:
-    // 1. Fetch the slide from Firestore
-    // 2. Check user plan and quotas
-    // 3. Call OpenAI to rewrite
-    // 4. Update the slide in Firestore
+    if (!projectId) {
+      return NextResponse.json({ error: "projectId is required" }, { status: 400 });
+    }
 
-    // For MVP, return a mock response
-    // In production, implement actual AI rewriting
+    // Check feature access (Pro plan required)
+    const hasAccess = await canAccessFeature(user.uid, "ai_rewrite");
+    if (!hasAccess) {
+      return NextResponse.json({
+        error: "AI Rewrite requires a Pro or Ultra plan.",
+        upgradeRequired: true,
+        feature: "ai_rewrite",
+      }, { status: 403 });
+    }
 
-    const prompts: Record<string, string> = {
-      shorter: "Make this content more concise while keeping the key points",
-      longer: "Expand this content with more detail and examples",
-      simpler: "Simplify the language to be more accessible",
-      formal: "Rewrite this in a more formal, professional tone",
-      add_examples: "Add relevant examples and case studies",
-      custom: customPrompt || "Improve this content",
+    // Check quota
+    const quotaResult = await checkRewriteQuota(user.uid);
+    if (!quotaResult.allowed) {
+      return NextResponse.json({
+        error: quotaResult.reason,
+        upgradeUrl: quotaResult.upgradeUrl,
+        currentCount: quotaResult.currentCount,
+        limit: quotaResult.limit,
+      }, { status: 403 });
+    }
+
+    const db = firestore();
+    if (!db) {
+      return NextResponse.json({ error: "Database not available" }, { status: 503 });
+    }
+
+    // Verify project ownership
+    const projectRef = doc(db, "projects", projectId);
+    const projectSnap = await getDoc(projectRef);
+    if (!projectSnap.exists() || projectSnap.data().userId !== user.uid) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    // Fetch the slide
+    const slideRef = doc(db, "projects", projectId, "slides", slideId);
+    const slideSnap = await getDoc(slideRef);
+    if (!slideSnap.exists()) {
+      return NextResponse.json({ error: "Slide not found" }, { status: 404 });
+    }
+
+    const slideData = slideSnap.data();
+    const currentContent: SlideContent = {
+      title: slideData.title || "",
+      bullets: slideData.bullets || [],
+      speakerNotes: slideData.speakerNotes || undefined,
+      layoutHint: slideData.layout || undefined,
+      imageQuery: slideData.imageQuery || undefined,
     };
 
-    // Simulate AI response (replace with actual OpenAI call in production)
-    const rewrittenContent = {
-      title: "Rewritten Slide Title",
-      bullets: [
-        "Key point 1",
-        "Key point 2 with more detail",
-        "Key point 3",
-      ],
-      speakerNotes: "Speaker notes have been updated",
-    };
+    // Call OpenAI rewrite
+    const rewritten = await rewriteSlide(currentContent, intent, customPrompt);
 
-    // Actual implementation would look like:
-    /*
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert presentation writer. Rewrite the slide content to be ${intent}.
-          Return only valid JSON with keys: title, bullets (array), speakerNotes (optional).
-          Keep bullets concise and professional.`,
-        },
-        {
-          role: "user",
-          content: `Rewrite this slide:\nTitle: ${slide.title}\nBullets: ${slide.bullets.join('\n')}`,
-        },
-      ],
-      response_format: { type: "json_object" },
+    // Update the slide in Firestore
+    await updateDoc(slideRef, {
+      title: rewritten.title,
+      bullets: rewritten.bullets,
+      speakerNotes: rewritten.speakerNotes || null,
+      updatedAt: serverTimestamp(),
     });
-    */
+
+    // Track usage
+    try {
+      await incrementUsage(user.uid, "rewrites", {
+        projectId,
+        slideId,
+        intent,
+      });
+    } catch (usageErr) {
+      console.error("Failed to track rewrite usage:", usageErr);
+    }
 
     return NextResponse.json({
       success: true,
-      rewritten: rewrittenContent,
+      rewritten: {
+        title: rewritten.title,
+        bullets: rewritten.bullets,
+        speakerNotes: rewritten.speakerNotes || null,
+      },
     });
 
   } catch (error) {
@@ -76,5 +113,3 @@ export async function POST(
     );
   }
 }
-
-

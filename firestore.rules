@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper Functions ──────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    // ── Users ─────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false; // Users cannot delete their own profile
+
+      // Usage counters sub-collection
+      match /usage/{yearMonth} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // ── Projects ──────────────────────────────────────────────────
+    match /projects/{projectId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      // Slides sub-collection
+      match /slides/{slideId} {
+        allow read: if isSignedIn()
+          && get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid;
+        allow write: if isSignedIn()
+          && get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid;
+      }
+    }
+
+    // ── Subscriptions ─────────────────────────────────────────────
+    match /subscriptions/{subId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Only server/webhooks can write subscriptions
+      allow write: if false;
+    }
+
+    // ── Usage Events (audit log) ──────────────────────────────────
+    match /usage_events/{eventId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Only server can create events
+      allow write: if false;
+    }
+
+    // ── Billing Events (webhook log) ──────────────────────────────
+    match /billing_events/{eventId} {
+      // Only server can read/write billing events
+      allow read, write: if false;
+    }
+
+    // ── Default deny ──────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

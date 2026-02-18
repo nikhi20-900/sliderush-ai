@@ -7,8 +7,38 @@ import { SlideThumbnails } from "./slide-thumbnails";
 import { SlideCanvas } from "./slide-canvas";
 import { SlideProperties } from "./slide-properties";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Undo, Redo, Save } from "lucide-react";
+import { Loader2, Download, Undo, Redo, Save, Check, AlertCircle, Cloud } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useAutosave } from "./use-autosave";
+import { useEditorStore, SaveStatus } from "@/store/editor.store";
+
+function SaveIndicator({ status }: { status: SaveStatus }) {
+  switch (status) {
+    case "saving":
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-gray-400 animate-pulse">
+          <Cloud className="w-3.5 h-3.5" />
+          Saving…
+        </span>
+      );
+    case "saved":
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-green-500">
+          <Check className="w-3.5 h-3.5" />
+          Saved
+        </span>
+      );
+    case "error":
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-red-500">
+          <AlertCircle className="w-3.5 h-3.5" />
+          Save failed
+        </span>
+      );
+    default:
+      return null;
+  }
+}
 
 interface EditorShellProps {
   project: Project;
@@ -25,7 +55,9 @@ export function EditorShell({
 }: EditorShellProps) {
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+
+  const saveStatus = useEditorStore((s) => s.saveStatus);
+  const { forceSave } = useAutosave();
 
   const selectedSlide = slides.find((s) => s.id === selectedSlideId) || null;
 
@@ -44,10 +76,10 @@ export function EditorShell({
       }
 
       const { downloadUrl } = await res.json();
-      
+
       // Trigger download
       window.open(downloadUrl, "_blank");
-      
+
       toast({
         title: "Export successful!",
         description: "Your presentation has been downloaded.",
@@ -64,17 +96,8 @@ export function EditorShell({
     }
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      // Autosave is handled automatically, this is for manual save
-      toast({
-        title: "Saved",
-        description: "Your presentation is saved.",
-      });
-    } finally {
-      setIsSaving(false);
-    }
+  const handleSave = () => {
+    forceSave();
   };
 
   return (
@@ -88,28 +111,25 @@ export function EditorShell({
           <span className="text-sm text-gray-500">
             {slides.length} slides
           </span>
+          <SaveIndicator status={saveStatus} />
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
+          <Button variant="ghost" size="sm" onClick={handleSave}>
+            <Save className="w-4 h-4" />
             <span className="ml-2 hidden sm:inline">Save</span>
           </Button>
-          
+
           <Button variant="outline" size="sm">
             <Undo className="w-4 h-4" />
           </Button>
-          
+
           <Button variant="outline" size="sm">
             <Redo className="w-4 h-4" />
           </Button>
-          
-          <Button 
-            size="sm" 
+
+          <Button
+            size="sm"
             onClick={handleExport}
             disabled={isExporting || slides.length === 0}
           >
@@ -155,4 +175,3 @@ export function EditorShell({
     </div>
   );
 }
-
